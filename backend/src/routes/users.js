@@ -1,5 +1,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
+import pool from '../db/index.js';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 
 export const router = express.Router();
@@ -84,14 +86,30 @@ export const router = express.Router();
  *               $ref: '#/components/schemas/User'
  */
 router.post('/register', async (req, res) => {
-  // Stub implementation
-  const { email, name } = req.body;
-  res.status(201).json({
-    id: 'new_user_id',
-    email,
-    name,
-    role: 'user'
-  });
+  try {
+    const { email, password, name } = req.body;
+    if (!email || !password || !name) return res.status(400).json({ message: 'Missing required fields' });
+
+    // Check if user exists
+    const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (existing.rows.length) return res.status(409).json({ message: 'User already exists' });
+
+    const hash = await bcrypt.hash(password, 10);
+    const result = await pool.query(
+      'INSERT INTO users (email, password_hash, name, role) VALUES ($1, $2, $3, $4) RETURNING id, email, name, role',
+      [email, hash, name, 'user']
+    );
+
+  const user = result.rows[0];
+
+  // Sign a token and return it so the frontend can auto-login after registration
+  const token = jwt.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET || 'default_secret', { expiresIn: '24h' });
+
+  res.status(201).json({ token, user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 /**
@@ -115,22 +133,27 @@ router.post('/register', async (req, res) => {
  *               $ref: '#/components/schemas/LoginResponse'
  */
 router.post('/login', async (req, res) => {
-  // Stub implementation
-  const token = jwt.sign(
-    { userId: 'user_id', role: 'user' },
-    process.env.JWT_SECRET || 'default_secret',
-    { expiresIn: '24h' }
-  );
-  
-  res.json({
-    token,
-    user: {
-      id: 'user_id',
-      email: req.body.email,
-      name: 'Test User',
-      role: 'user'
-    }
-  });
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ message: 'Missing email or password' });
+
+    const result = await pool.query('SELECT id, email, password_hash, name, role FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
+    if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+
+    const match = await bcrypt.compare(password, user.password_hash);
+    if (!match) return res.status(401).json({ message: 'Invalid credentials' });
+
+    const token = jwt.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET || 'default_secret', { expiresIn: '24h' });
+
+    res.json({
+      token,
+      user: { id: user.id, email: user.email, name: user.name, role: user.role }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 /**
@@ -150,12 +173,15 @@ router.post('/login', async (req, res) => {
  *               $ref: '#/components/schemas/User'
  */
 router.get('/profile', authMiddleware, async (req, res) => {
-  res.json({
-    id: req.user.userId,
-    email: 'user@example.com',
-    name: 'Test User',
-    role: req.user.role
-  });
+  try {
+    const result = await pool.query('SELECT id, email, name, role, created_at FROM users WHERE id = $1', [req.user.userId]);
+    const user = result.rows[0];
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 /**
@@ -177,8 +203,11 @@ router.get('/profile', authMiddleware, async (req, res) => {
  *                 $ref: '#/components/schemas/User'
  */
 router.get('/', authMiddleware, adminMiddleware, async (req, res) => {
-  res.json([
-    { id: 'u1', name: 'Admin User', role: 'admin', email: 'admin@example.com' },
-    { id: 'u2', name: 'Regular User', role: 'user', email: 'user@example.com' }
-  ]);
+  try {
+    const result = await pool.query('SELECT id, email, name, role, created_at FROM users');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });

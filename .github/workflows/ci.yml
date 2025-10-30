@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: testdb
+      PGPORT: 5432
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Wait for Postgres
+        run: |
+          for i in {1..30}; do
+            pg_isready -h localhost -p 5432 -U postgres && break || sleep 1
+          done
+
+      - name: Run migrations
+        working-directory: backend
+        run: npm run migrate
+
+      - name: Run tests
+        working-directory: backend
+        run: npm test
+  frontend-build:
+    runs-on: ubuntu-latest
+    needs: backend-tests
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+      - name: Smoke check built files
+        working-directory: frontend
+        run: |
+          if [ ! -f dist/index.html ]; then echo "Build failed: dist/index.html not found"; exit 1; fi
+          echo "Frontend build OK"
+
+      - name: Serve built frontend and smoke test
+        working-directory: frontend/dist
+        run: |
+          python3 -m http.server 5000 &
+          sleep 2
+          curl -f http://localhost:5000 || (echo "Could not fetch built site"; exit 1)

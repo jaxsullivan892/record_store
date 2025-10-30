@@ -121,9 +121,15 @@ Souveneer Records is a sophisticated e-commerce platform designed specifically f
 
 The application will be available at:
 
-- Frontend: [http://localhost:5173](http://localhost:5173)
-- Backend API: [http://localhost:3000](http://localhost:3000)
-- Admin Dashboard: [http://localhost:5173/admin](http://localhost:5173/admin)
+- Frontend (dev): [http://localhost:5173](http://localhost:5173)
+- Backend API (dev): [http://localhost:3000](http://localhost:3000)
+- Admin Dashboard (dev): [http://localhost:5173/admin](http://localhost:5173/admin)
+
+If you run the application with Docker Compose the services are fronted by Nginx on port 80. In that case use:
+
+- Frontend (docker): http://localhost/
+- Backend API (docker via proxy): http://localhost/api/
+
 
 ## 💻 Development
 
@@ -251,14 +257,64 @@ The API uses JWT (JSON Web Token) for authentication and authorization:
 
 ### Accessing the Documentation
 
-1. Start the backend server:
+1. Start the backend server (dev):
 
-    ```bash
-    cd backend
-    npm run dev
-    ```
+  ```bash
+  cd backend
+  npm run dev
+  ```
 
-2. Visit [http://localhost:3000/api/docs](http://localhost:3000/api/docs) in your browser
+2. Visit the docs in your browser
+
+- If running the backend locally (dev) visit: http://localhost:3000/api/docs
+- If running the full stack via Docker Compose (the backend is proxied by Nginx) visit: http://localhost/api/docs
+
+Note: The backend service in the docker-compose setup is exposed internally and proxied through the `nginx` service. That means `http://localhost:3000` will not be reachable from your host when using `docker-compose up` unless you explicitly publish the backend port in `docker-compose.yml`.
+
+## 🔐 Authentication & UI changes (recent)
+
+This project recently refactored the authentication flow and top navigation. Key changes:
+
+- The previous left `Sidebar` navigation has been removed — navigation links were moved into the top navigation bar (`Navbar`).
+- Top nav now includes: Catalog, New Arrivals, Merch, About.
+- There is no explicit "Account" or "Admin Dashboard" link in the UI. Instead:
+  - Clicking the user name/avatar in the top-right opens a profile modal containing profile information and order history.
+  - Login is performed in a centered modal dialog (email + password). The login modal includes a link to create an account which opens a small registration form.
+- Admin behavior: if a user with role `admin` logs in successfully, they are immediately redirected to the Admin Dashboard (`/admin`).
+
+### Seeded admin user
+
+An admin user is seeded into the initial SQL schema so an admin is available on first database setup. Credentials:
+
+- Email: `admin@admin.com`
+- Password: `admin123`
+
+This user is inserted via `backend/src/db/schema.sql` using a precomputed bcrypt password hash. The INSERT is idempotent and will not overwrite an existing user with the same email.
+
+If you prefer to create the admin via a migration step instead of the SQL seed, run the backend migration script after the database is available (the repository includes a `migrate` npm script placeholder).
+
+### Running migrations & tests locally
+
+- Run the migration script locally (applies schema and ensures admin user is seeded):
+
+```powershell
+cd backend
+npm install
+npm run migrate
+```
+
+- To run integration tests (requires a test Postgres instance and env vars pointing to it):
+
+```powershell
+cd backend
+npm install
+# Ensure your test DB env vars are set (POSTGRES_*) then:
+npm test
+```
+
+Notes:
+- The backend `package.json` includes `migrate` which runs `node src/db/migrate.js` and a `test` script that runs the integration tests with `jest` and `supertest`.
+- For production-grade migrations, consider using `node-pg-migrate` or `knex` and wiring migrations into CI. A `migrate:pg` script is included as a placeholder for integration with a proper migrations tool.
 
 ### Core Endpoints
 

@@ -2,11 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Small helper styles for the SPA preview and layout consistency */
+/* Dark theme base to match the project screenshots */
+:root {
+  --sr-bg: #0b1117; /* deep navy */
+  --sr-surface: #0f1721;
+  --sr-muted: #94a3b8;
+  --sr-accent: #4f46e5;
+}
+
 html, body, #root {
   height: 100%;
 }
+
 body {
-  @apply bg-gray-50 text-gray-800;
+  /* use Tailwind utilities via @apply for consistency */
+  @apply bg-[var(--sr-bg)] text-gray-100;
+  color: #e6eef8;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* Small helper for container/background surfaces used across components */
+.sr-surface {
+  background-color: var(--sr-surface);
+  color: inherit;
+}
+
+.sr-muted { color: var(--sr-muted); }
+.sr-accent { color: var(--sr-accent); }
+
+/* Smooth UI helpers */
+.container-surface {
+  @apply p-6 rounded-xl shadow-xl bg-[color:var(--sr-surface)];
+}
+
+.card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03));
+  border: 1px solid rgba(255,255,255,0.03);
+  @apply p-4 rounded-lg;
+}
+
+.btn-primary {
+  @apply bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-md shadow-sm;
+}
+
+.muted { color: rgba(230,238,248,0.65); }
