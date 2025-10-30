@@ -31,20 +31,3 @@ body {
 
 .sr-muted { color: var(--sr-muted); }
 .sr-accent { color: var(--sr-accent); }
-
-/* Smooth UI helpers */
-.container-surface {
-  @apply p-6 rounded-xl shadow-xl bg-[color:var(--sr-surface)];
-}
-
-.card {
-  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03));
-  border: 1px solid rgba(255,255,255,0.03);
-  @apply p-4 rounded-lg;
-}
-
-.btn-primary {
-  @apply bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-md shadow-sm;
-}
-
-.muted { color: rgba(230,238,248,0.65); }

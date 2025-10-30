@@ -1,26 +1,26 @@
-exports.shorthands = undefined
-
 exports.up = (pgm) => {
-  pgm.createTable('orders', {
-    id: { type: 'serial', primaryKey: true },
-    user_id: { type: 'integer', references: 'users' },
-    status: { type: 'varchar(50)', default: 'pending' },
-    total: { type: 'decimal(10,2)', notNull: true },
-    shipping_address: { type: 'text' },
-    created_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('current_timestamp') }
-  })
+  pgm.sql(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      status VARCHAR(50) DEFAULT 'pending',
+      total DECIMAL(10,2) NOT NULL,
+      shipping_address TEXT,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
 
-  pgm.createTable('order_items', {
-    id: { type: 'serial', primaryKey: true },
-    order_id: { type: 'integer', references: 'orders' },
-    product_id: { type: 'integer', references: 'sr_discogs_inventory' },
-    quantity: { type: 'integer', notNull: true },
-    price_at_time: { type: 'decimal(10,2)', notNull: true },
-    created_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('current_timestamp') }
-  })
-}
+    CREATE TABLE IF NOT EXISTS order_items (
+      id SERIAL PRIMARY KEY,
+      order_id INTEGER REFERENCES orders(id),
+      product_id INTEGER REFERENCES sr_discogs_inventory(id),
+      quantity INTEGER NOT NULL,
+      price_at_time DECIMAL(10,2) NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+};
 
 exports.down = (pgm) => {
-  pgm.dropTable('order_items')
-  pgm.dropTable('orders')
-}
+  pgm.sql('DROP TABLE IF EXISTS order_items;');
+  pgm.sql('DROP TABLE IF EXISTS orders;');
+};

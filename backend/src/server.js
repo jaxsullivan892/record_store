@@ -42,4 +42,5 @@ if (process.env.NODE_ENV !== 'test') {
   });
 }
 
+// Export app for tests and programmatic usage
 export default app;

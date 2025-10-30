@@ -1,19 +1,19 @@
-exports.shorthands = undefined
-
 exports.up = (pgm) => {
-  pgm.createTable('sr_discogs_inventory', {
-    id: { type: 'serial', primaryKey: true },
-    discogs_id: { type: 'varchar(255)' },
-    title: { type: 'varchar(255)', notNull: true },
-    artist: { type: 'varchar(255)', notNull: true },
-    price: { type: 'decimal(10,2)', notNull: true },
-    quantity: { type: 'integer', default: 0 },
-    description: { type: 'text' },
-    created_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('current_timestamp') },
-    updated_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('current_timestamp') }
-  })
-}
+  pgm.sql(`
+    CREATE TABLE IF NOT EXISTS sr_discogs_inventory (
+      id SERIAL PRIMARY KEY,
+      discogs_id VARCHAR(255),
+      title VARCHAR(255) NOT NULL,
+      artist VARCHAR(255) NOT NULL,
+      price DECIMAL(10,2) NOT NULL,
+      quantity INTEGER DEFAULT 0,
+      description TEXT,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+};
 
 exports.down = (pgm) => {
-  pgm.dropTable('sr_discogs_inventory')
-}
+  pgm.sql('DROP TABLE IF EXISTS sr_discogs_inventory;');
+};

@@ -293,29 +293,6 @@ This user is inserted via `backend/src/db/schema.sql` using a precomputed bcrypt
 
 If you prefer to create the admin via a migration step instead of the SQL seed, run the backend migration script after the database is available (the repository includes a `migrate` npm script placeholder).
 
-### Running migrations & tests locally
-
-- Run the migration script locally (applies schema and ensures admin user is seeded):
-
-```powershell
-cd backend
-npm install
-npm run migrate
-```
-
-- To run integration tests (requires a test Postgres instance and env vars pointing to it):
-
-```powershell
-cd backend
-npm install
-# Ensure your test DB env vars are set (POSTGRES_*) then:
-npm test
-```
-
-Notes:
-- The backend `package.json` includes `migrate` which runs `node src/db/migrate.js` and a `test` script that runs the integration tests with `jest` and `supertest`.
-- For production-grade migrations, consider using `node-pg-migrate` or `knex` and wiring migrations into CI. A `migrate:pg` script is included as a placeholder for integration with a proper migrations tool.
-
 ### Core Endpoints
 
 #### Catalog Management

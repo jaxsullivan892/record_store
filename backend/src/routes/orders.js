@@ -160,59 +160,29 @@ router.get('/:id', authMiddleware, async (req, res) => {
  *               $ref: '#/components/schemas/Order'
  */
 router.post('/', authMiddleware, async (req, res) => {
-  const client = await pool.connect();
   try {
     const { items } = req.body;
     if (!items || !Array.isArray(items) || items.length === 0) return res.status(400).json({ message: 'Invalid items' });
 
-    // Basic validation on items
-    for (const it of items) {
-      if (!it.productId || !it.quantity || !it.price) return res.status(400).json({ message: 'Each item requires productId, quantity, and price' });
-      if (Number(it.quantity) <= 0) return res.status(400).json({ message: 'Quantity must be greater than zero' });
-    }
-
     const total = items.reduce((sum, it) => sum + (Number(it.price) * Number(it.quantity)), 0);
 
-    await client.query('BEGIN');
-    const insertOrder = await client.query(
+    const insertOrder = await pool.query(
       'INSERT INTO orders (user_id, status, total, shipping_address) VALUES ($1, $2, $3, $4) RETURNING id, user_id, status, total, created_at',
       [req.user.userId, 'pending', total, req.body.shipping_address || null]
     );
     const order = insertOrder.rows[0];
 
-    // For each item, ensure inventory is sufficient and decrement in the same transaction
     for (const it of items) {
-      // lock the product row
-      const prodRes = await client.query('SELECT quantity FROM sr_discogs_inventory WHERE id = $1 FOR UPDATE', [it.productId])
-      if (!prodRes.rows.length) {
-        await client.query('ROLLBACK')
-        return res.status(400).json({ message: `Product ${it.productId} not found` })
-      }
-      const available = Number(prodRes.rows[0].quantity)
-      if (available < Number(it.quantity)) {
-        await client.query('ROLLBACK')
-        return res.status(400).json({ message: `Insufficient inventory for product ${it.productId}` })
-      }
-
-      // decrement inventory
-      await client.query('UPDATE sr_discogs_inventory SET quantity = quantity - $1 WHERE id = $2', [it.quantity, it.productId])
-
-      // insert order item
-      await client.query('INSERT INTO order_items (order_id, product_id, quantity, price_at_time) VALUES ($1, $2, $3, $4)', [order.id, it.productId, it.quantity, it.price]);
+      await pool.query('INSERT INTO order_items (order_id, product_id, quantity, price_at_time) VALUES ($1, $2, $3, $4)', [order.id, it.productId, it.quantity, it.price]);
     }
-
-    await client.query('COMMIT');
 
     const itemsRes = await pool.query('SELECT * FROM order_items WHERE order_id = $1', [order.id]);
     order.items = itemsRes.rows;
 
     res.status(201).json(order);
   } catch (err) {
-    await client.query('ROLLBACK').catch(()=>{})
-    console.error('Order creation failed:', err);
+    console.error(err);
     res.status(500).json({ message: 'Internal server error' });
-  } finally {
-    client.release();
   }
 });
 

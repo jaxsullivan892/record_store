@@ -36,12 +36,12 @@ export default function Navbar() {
           <div className="flex items-center gap-4">
             {user?.isAuthenticated ? (
               <>
-                <button onClick={handleAvatarClick} className="rounded-full bg-[var(--sr-surface)] px-3 py-1 text-sm text-white shadow-sm">{user.name}</button>
-                <button onClick={() => { logout(); navigate('/') }} className="ml-2 text-sm text-slate-300">Logout</button>
+                <button onClick={handleAvatarClick} className="rounded-full bg-slate-700 px-3 py-1 text-sm text-white">{user.name}</button>
+                <button onClick={() => { logout(); navigate('/') }} className="text-sm text-slate-300">Logout</button>
               </>
             ) : (
               <div className="flex gap-3">
-                <button onClick={() => setShowLogin(true)} className="text-sm text-slate-200 border border-transparent hover:border-slate-600 px-3 py-1 rounded">Login</button>
+                <button onClick={() => setShowLogin(true)} className="text-sm text-slate-300">Login</button>
               </div>
             )}
           </div>
